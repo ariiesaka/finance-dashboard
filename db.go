@@ -148,6 +148,35 @@ func listExpensesForMonth(db *sql.DB, yearMonth string) ([]Transaction, error) {
 	return txns, rows.Err()
 }
 
+func listExpensesForRange(db *sql.DB, startDate, endDate string) ([]Transaction, error) {
+	rows, err := db.Query(
+		`SELECT id, date, COALESCE(time,''), category, amount, merchant,
+		        COALESCE(account,'Cash'), COALESCE(method,''), COALESCE(notes,'')
+		 FROM transactions
+		 WHERE date >= ? AND date <= ?
+		 ORDER BY date DESC, id DESC`,
+		startDate, endDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var txns []Transaction
+	for rows.Next() {
+		var t Transaction
+		if err := rows.Scan(&t.ID, &t.Date, &t.Time, &t.Category, &t.Amount,
+			&t.Merchant, &t.Account, &t.Method, &t.Notes); err != nil {
+			return nil, err
+		}
+		txns = append(txns, t)
+	}
+	if txns == nil {
+		txns = []Transaction{}
+	}
+	return txns, rows.Err()
+}
+
 func expenseCategoryBreakdown(db *sql.DB, yearMonth string) ([]CategoryBreakdown, error) {
 	rows, err := db.Query(
 		`SELECT category, SUM(amount) as total, COUNT(*) as count
@@ -176,6 +205,34 @@ func expenseCategoryBreakdown(db *sql.DB, yearMonth string) ([]CategoryBreakdown
 	return cats, rows.Err()
 }
 
+func categoryBreakdownForRange(db *sql.DB, startDate, endDate string) ([]CategoryBreakdown, error) {
+	rows, err := db.Query(
+		`SELECT category, SUM(amount) as total, COUNT(*) as count
+		 FROM transactions
+		 WHERE date >= ? AND date <= ?
+		 GROUP BY category
+		 ORDER BY total DESC`,
+		startDate, endDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var cats []CategoryBreakdown
+	for rows.Next() {
+		var c CategoryBreakdown
+		if err := rows.Scan(&c.Category, &c.Total, &c.Count); err != nil {
+			return nil, err
+		}
+		cats = append(cats, c)
+	}
+	if cats == nil {
+		cats = []CategoryBreakdown{}
+	}
+	return cats, rows.Err()
+}
+
 func totalExpensesForMonth(db *sql.DB, yearMonth string) (float64, error) {
 	var total float64
 	err := db.QueryRow(
@@ -183,6 +240,31 @@ func totalExpensesForMonth(db *sql.DB, yearMonth string) (float64, error) {
 		yearMonth+"%",
 	).Scan(&total)
 	return total, err
+}
+
+func totalExpensesForRange(db *sql.DB, startDate, endDate string) (float64, error) {
+	var total float64
+	err := db.QueryRow(
+		"SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE date >= ? AND date <= ?",
+		startDate, endDate,
+	).Scan(&total)
+	return total, err
+}
+
+func updateExpense(db *sql.DB, t Transaction) error {
+	res, err := db.Exec(
+		`UPDATE transactions SET date=?, category=?, amount=?, merchant=?
+		 WHERE id=?`,
+		t.Date, t.Category, t.Amount, t.Merchant, t.ID,
+	)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("expense not found")
+	}
+	return nil
 }
 
 // ─── Debt Queries ───────────────────────────────────────────

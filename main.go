@@ -128,6 +128,7 @@ func cmdServe(db *sql.DB, port string, secure bool) {
 	mux.Handle("/api/expenses", authMiddleware(db, handler.createExpense))
 	mux.Handle("/api/expenses/list", authMiddleware(db, handler.listExpenses))
 	mux.Handle("/api/expenses/delete", authMiddleware(db, handler.deleteExpense))
+	mux.Handle("/api/expenses/update", authMiddleware(db, handler.updateExpense))
 
 	// Debt routes
 	mux.Handle("/api/debts", authMiddleware(db, handler.createDebt))
@@ -145,6 +146,8 @@ func cmdServe(db *sql.DB, port string, secure bool) {
 	mux.Handle("/dashboard.html", authMiddleware(db, func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/dashboard.html")
 	}))
+
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	protocol := "http"
 	if secure {
