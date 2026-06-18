@@ -35,6 +35,37 @@
   nav button:hover { border-color: #ef4444; color: #ef4444; }
   .container { max-width: 960px; margin: 0 auto; padding: 24px; }
 
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: #12121a;
+    border-radius: 12px;
+    padding: 4px;
+    border: 1px solid #2a2a3e;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+    transition: all 0.2s;
+    border: none;
+    background: none;
+  }
+  .tab:hover { color: #aaa; }
+  .tab.active {
+    background: #f59e0b;
+    color: #0a0a0f;
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
   .card {
     background: #12121a;
     border: 1px solid #2a2a3e;
@@ -109,6 +140,7 @@
   .btn:hover { background: #d97706; }
   .btn-danger { background: #7f1d1d; color: #fca5a5; }
   .btn-danger:hover { background: #991b1b; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
 
   table {
     width: 100%;
@@ -188,6 +220,36 @@
   .month-nav button:hover { background: #3a3a5e; }
   .month-nav span { font-size: 14px; font-weight: 600; color: #fff; min-width: 80px; text-align: center; }
 
+  /* Progress bar */
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #1a1a2e;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 6px 0;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+  .progress-fill.high { background: #34d399; }
+  .progress-fill.medium { background: #f59e0b; }
+  .progress-fill.low { background: #3b82f6; }
+
+  .priority-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .priority-badge.high { background: #065f46; color: #6ee7b7; }
+  .priority-badge.medium { background: #78350f; color: #fbbf24; }
+  .priority-badge.low { background: #1e3a5f; color: #93c5fd; }
+
   .toast {
     position: fixed;
     bottom: 20px;
@@ -219,84 +281,180 @@
 
   <div id="toast" class="toast"></div>
 
-  <!-- Summary -->
-  <div class="card">
-    <h3>This Month</h3>
-    <div class="summary-grid">
-      <div class="summary-box">
-        <div class="label">Expenses</div>
-        <div class="value red" id="totalExpenses">—</div>
-      </div>
-      <div class="summary-box">
-        <div class="label">Categories</div>
-        <div class="value gold" id="totalCategories">—</div>
-      </div>
-      <div class="summary-box">
-        <div class="label">Transactions</div>
-        <div class="value" id="totalTransactions" style="color:#fff">—</div>
-      </div>
-    </div>
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('expenses')" id="tab-expenses">📝 Expenses</button>
+    <button class="tab" onclick="switchTab('debts')" id="tab-debts">💳 Debts</button>
+    <button class="tab" onclick="switchTab('goals')" id="tab-goals">🎯 Goals</button>
   </div>
 
-  <!-- Add Expense -->
-  <div class="card">
-    <h3>Add Expense</h3>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Merchant</label>
-        <input type="text" id="merchant" placeholder="e.g. Wingstop" autofocus>
-      </div>
-      <div class="form-group" style="max-width: 100px;">
-        <label>Amount</label>
-        <input type="number" id="amount" placeholder="0" step="100">
-      </div>
-      <div class="form-group" style="max-width: 140px;">
-        <label>Category</label>
-        <select id="category">
-          <option value="Food & Drink">Food & Drink</option>
-          <option value="Transport">Transport</option>
-          <option value="Shopping">Shopping</option>
-          <option value="Bills & Utilities">Bills & Utilities</option>
-          <option value="Health">Health</option>
-          <option value="Personal Care">Personal Care</option>
-          <option value="Subscription">Subscription</option>
-          <option value="Transfer">Transfer</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
-      <div class="form-group" style="max-width: 130px;">
-        <label>Date</label>
-        <input type="date" id="expenseDate">
-      </div>
-      <div class="form-group" style="max-width: 100px; align-self: flex-end;">
-        <button class="btn" onclick="addExpense()">Add</button>
+  <!-- ═══════════════════════════════════════════════════════════
+       TAB: EXPENSES
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="tab-content active" id="tab-content-expenses">
+
+    <div class="card">
+      <h3>This Month</h3>
+      <div class="summary-grid">
+        <div class="summary-box">
+          <div class="label">Expenses</div>
+          <div class="value red" id="totalExpenses">—</div>
+        </div>
+        <div class="summary-box">
+          <div class="label">Categories</div>
+          <div class="value gold" id="totalCategories">—</div>
+        </div>
+        <div class="summary-box">
+          <div class="label">Transactions</div>
+          <div class="value" style="color:#fff" id="totalTransactions">—</div>
+        </div>
       </div>
     </div>
+
+    <div class="card">
+      <h3>Add Expense</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Merchant</label>
+          <input type="text" id="merchant" placeholder="e.g. Wingstop" autofocus>
+        </div>
+        <div class="form-group" style="max-width: 100px;">
+          <label>Amount</label>
+          <input type="number" id="amount" placeholder="0" step="100">
+        </div>
+        <div class="form-group" style="max-width: 140px;">
+          <label>Category</label>
+          <select id="category">
+            <option value="Food & Drink">Food & Drink</option>
+            <option value="Transport">Transport</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Bills & Utilities">Bills & Utilities</option>
+            <option value="Health">Health</option>
+            <option value="Personal Care">Personal Care</option>
+            <option value="Subscription">Subscription</option>
+            <option value="Transfer">Transfer</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group" style="max-width: 130px;">
+          <label>Date</label>
+          <input type="date" id="expenseDate">
+        </div>
+        <div class="form-group" style="max-width: 100px; align-self: flex-end;">
+          <button class="btn" onclick="addExpense()">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Spending by Category</h3>
+      <div class="cat-chart-container">
+        <div class="cat-chart"><canvas id="categoryChart"></canvas></div>
+        <div class="cat-list" id="categoryList"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="month-nav">
+        <button onclick="changeMonth(-1)">◀</button>
+        <span id="monthLabel"></span>
+        <button onclick="changeMonth(1)">▶</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Merchant</th><th>Category</th><th style="text-align:right">Amount</th><th></th></tr>
+        </thead>
+        <tbody id="expenseList"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState">No expenses yet. Add one above!</div>
+    </div>
+
   </div>
 
-  <!-- Categories + Chart -->
-  <div class="card">
-    <h3>Spending by Category</h3>
-    <div class="cat-chart-container">
-      <div class="cat-chart"><canvas id="categoryChart"></canvas></div>
-      <div class="cat-list" id="categoryList"></div>
+  <!-- ═══════════════════════════════════════════════════════════
+       TAB: DEBTS
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="tab-content" id="tab-content-debts">
+
+    <div id="debtSummary" class="card" style="display:none">
+      <h3>Debt Overview</h3>
+      <div class="summary-grid">
+        <div class="summary-box">
+          <div class="label">Total Debt</div>
+          <div class="value red" id="totalDebtAmount">—</div>
+        </div>
+        <div class="summary-box">
+          <div class="label">Total Paid</div>
+          <div class="value green" id="totalDebtPaid">—</div>
+        </div>
+        <div class="summary-box">
+          <div class="label">Remaining</div>
+          <div class="value gold" id="totalDebtRemaining">—</div>
+        </div>
+      </div>
     </div>
+
+    <div class="card">
+      <h3>Add Debt</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="debtName" placeholder="e.g. DBS Loan">
+        </div>
+        <div class="form-group" style="max-width: 120px;">
+          <label>Amount</label>
+          <input type="number" id="debtAmount" placeholder="0">
+        </div>
+        <div class="form-group" style="max-width: 120px;">
+          <label>Priority</label>
+          <select id="debtPriority">
+            <option value="high">🔴 High</option>
+            <option value="medium" selected>🟡 Medium</option>
+            <option value="low">🔵 Low</option>
+          </select>
+        </div>
+        <div class="form-group" style="max-width: 100px; align-self: flex-end;">
+          <button class="btn" onclick="addDebt()">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="debtList"></div>
+
   </div>
 
-  <!-- Recent Expenses -->
-  <div class="card">
-    <div class="month-nav">
-      <button onclick="changeMonth(-1)">◀</button>
-      <span id="monthLabel"></span>
-      <button onclick="changeMonth(1)">▶</button>
+  <!-- ═══════════════════════════════════════════════════════════
+       TAB: GOALS
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="tab-content" id="tab-content-goals">
+
+    <div class="card">
+      <h3>Add Goal / Wishlist</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="goalName" placeholder="e.g. PC Build">
+        </div>
+        <div class="form-group" style="max-width: 120px;">
+          <label>Target</label>
+          <input type="number" id="goalTarget" placeholder="0">
+        </div>
+        <div class="form-group" style="max-width: 120px;">
+          <label>Priority</label>
+          <select id="goalPriority">
+            <option value="high">🔴 High</option>
+            <option value="medium" selected>🟡 Medium</option>
+            <option value="low">🔵 Low</option>
+          </select>
+        </div>
+        <div class="form-group" style="max-width: 100px; align-self: flex-end;">
+          <button class="btn" onclick="addGoal()">Add</button>
+        </div>
+      </div>
     </div>
-    <table>
-      <thead>
-        <tr><th>Date</th><th>Merchant</th><th>Category</th><th style="text-align:right">Amount</th><th></th></tr>
-      </thead>
-      <tbody id="expenseList"></tbody>
-    </table>
-    <div class="empty-state" id="emptyState">No expenses yet. Add one above!</div>
+
+    <div id="goalList"></div>
+
   </div>
 
 </div>
@@ -322,6 +480,21 @@ function showToast(msg, type) {
   t.className = 'toast ' + type;
   setTimeout(() => t.className = 'toast', 2500);
 }
+
+// ─── Tab Switching ──────────────────────────────────────────
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-content-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+
+  if (tab === 'expenses') loadMonth();
+  if (tab === 'debts') loadDebts();
+  if (tab === 'goals') loadGoals();
+}
+
+// ─── EXPENSES ───────────────────────────────────────────────
 
 async function addExpense() {
   const merchant = document.getElementById('merchant').value.trim();
@@ -372,7 +545,7 @@ async function loadMonth() {
   (data.categories || []).forEach(c => {
     const div = document.createElement('div');
     div.className = 'cat-item';
-    div.innerHTML = '<span class="cat-name">' + c.category + '</span><span class="cat-amount">Rp ' + formatIDR(c.total) + '</span>';
+    div.innerHTML = '<span class="cat-name">' + escapeHtml(c.category) + '</span><span class="cat-amount">Rp ' + formatIDR(c.total) + '</span>';
     catList.appendChild(div);
   });
 
@@ -395,9 +568,7 @@ async function loadMonth() {
       options: {
         responsive: true,
         maintainAspectRatio: true,
-        plugins: {
-          legend: { display: false }
-        }
+        plugins: { legend: { display: false } }
       }
     });
   }
@@ -456,8 +627,252 @@ function changeMonth(delta) {
   loadMonth();
 }
 
+// ─── DEBTS ──────────────────────────────────────────────────
+
+async function addDebt() {
+  const name = document.getElementById('debtName').value.trim();
+  const amount = parseFloat(document.getElementById('debtAmount').value);
+  const priority = document.getElementById('debtPriority').value;
+
+  if (!name || !amount) {
+    showToast('Fill in name and amount', 'error');
+    return;
+  }
+
+  const data = await api('/api/debts', {
+    method: 'POST',
+    body: JSON.stringify({ name, total_amount: amount, priority })
+  });
+
+  if (data.ok) {
+    document.getElementById('debtName').value = '';
+    document.getElementById('debtAmount').value = '';
+    showToast('Debt added!', 'success');
+    loadDebts();
+  } else {
+    showToast(data.error || 'Failed to save', 'error');
+  }
+}
+
+async function deleteDebt(id) {
+  if (!confirm('Delete this debt and all payments?')) return;
+  const data = await api('/api/debts/delete?id=' + id, { method: 'POST' });
+  if (data.ok) {
+    showToast('Debt deleted', 'success');
+    loadDebts();
+  }
+}
+
+async function addPayment(debtId) {
+  const amountInput = document.getElementById('pay-amount-' + debtId);
+  const dateInput = document.getElementById('pay-date-' + debtId);
+  const amount = parseFloat(amountInput.value);
+  const date = dateInput.value;
+
+  if (!amount || !date) {
+    showToast('Enter amount and date', 'error');
+    return;
+  }
+
+  const data = await api('/api/debts/payments', {
+    method: 'POST',
+    body: JSON.stringify({ debt_id: debtId, amount, date })
+  });
+
+  if (data.ok) {
+    amountInput.value = '';
+    showToast('Payment logged!', 'success');
+    loadDebts();
+  } else {
+    showToast(data.error || 'Failed to save', 'error');
+  }
+}
+
+async function loadDebts() {
+  const debts = await api('/api/debts/list');
+
+  const listEl = document.getElementById('debtList');
+  const summaryEl = document.getElementById('debtSummary');
+  listEl.innerHTML = '';
+
+  if (!debts || debts.length === 0) {
+    summaryEl.style.display = 'none';
+    listEl.innerHTML = '<div class="card"><div class="empty-state">No debts tracked yet. Add one above!</div></div>';
+    return;
+  }
+
+  summaryEl.style.display = 'block';
+
+  let totalAmount = 0, totalPaid = 0, totalRemaining = 0;
+  debts.forEach(d => {
+    totalAmount += d.debt.total_amount;
+    totalPaid += d.total_paid;
+    totalRemaining += d.debt.remaining;
+  });
+
+  document.getElementById('totalDebtAmount').textContent = 'Rp ' + formatIDR(totalAmount);
+  document.getElementById('totalDebtPaid').textContent = 'Rp ' + formatIDR(totalPaid);
+  document.getElementById('totalDebtRemaining').textContent = 'Rp ' + formatIDR(totalRemaining);
+
+  debts.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+        <div>
+          <strong style="font-size:15px;color:#fff">${escapeHtml(d.debt.name)}</strong>
+          <span class="priority-badge ${d.debt.priority}" style="margin-left:8px">${d.debt.priority}</span>
+          ${d.debt.description ? '<div style="color:#666;font-size:12px;margin-top:2px">' + escapeHtml(d.debt.description) + '</div>' : ''}
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="deleteDebt(${d.debt.id})">✕</button>
+      </div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="font-size:13px"><span style="color:#888">Total:</span> <span style="color:#ef4444;font-weight:600">Rp ${formatIDR(d.debt.total_amount)}</span></div>
+        <div style="font-size:13px"><span style="color:#888">Paid:</span> <span style="color:#34d399;font-weight:600">Rp ${formatIDR(d.total_paid)}</span></div>
+        <div style="font-size:13px"><span style="color:#888">Remaining:</span> <span style="color:#f59e0b;font-weight:600">Rp ${formatIDR(d.debt.remaining)}</span></div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill ${d.debt.priority}" style="width:${d.progress}%"></div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:#666;margin-top:4px">${d.progress}% paid off</div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #1a1a2e">
+        <div class="form-row">
+          <div class="form-group" style="max-width:120px">
+            <label>Payment</label>
+            <input type="number" id="pay-amount-${d.debt.id}" placeholder="0">
+          </div>
+          <div class="form-group" style="max-width:130px">
+            <label>Date</label>
+            <input type="date" id="pay-date-${d.debt.id}">
+          </div>
+          <div class="form-group" style="max-width:80px;align-self:flex-end">
+            <button class="btn btn-sm" onclick="addPayment(${d.debt.id})">Pay</button>
+          </div>
+        </div>
+      </div>
+    `;
+    // Set default date
+    const dateInput = card.querySelector('input[type="date"]');
+    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+    listEl.appendChild(card);
+  });
+}
+
+// ─── GOALS ──────────────────────────────────────────────────
+
+async function addGoal() {
+  const name = document.getElementById('goalName').value.trim();
+  const target = parseFloat(document.getElementById('goalTarget').value);
+  const priority = document.getElementById('goalPriority').value;
+
+  if (!name || !target) {
+    showToast('Fill in name and target amount', 'error');
+    return;
+  }
+
+  const data = await api('/api/goals', {
+    method: 'POST',
+    body: JSON.stringify({ name, target_amount: target, priority })
+  });
+
+  if (data.ok) {
+    document.getElementById('goalName').value = '';
+    document.getElementById('goalTarget').value = '';
+    showToast('Goal added!', 'success');
+    loadGoals();
+  } else {
+    showToast(data.error || 'Failed to save', 'error');
+  }
+}
+
+async function updateGoal(id) {
+  const input = document.getElementById('goal-progress-' + id);
+  const amount = parseFloat(input.value);
+
+  if (amount < 0) {
+    showToast('Amount must be >= 0', 'error');
+    return;
+  }
+
+  const data = await api('/api/goals/update?id=' + id, {
+    method: 'POST',
+    body: JSON.stringify({ current_amount: amount })
+  });
+
+  if (data.ok) {
+    input.value = '';
+    showToast('Progress updated!', 'success');
+    loadGoals();
+  } else {
+    showToast(data.error || 'Failed to update', 'error');
+  }
+}
+
+async function deleteGoal(id) {
+  if (!confirm('Delete this goal?')) return;
+  const data = await api('/api/goals/delete?id=' + id, { method: 'POST' });
+  if (data.ok) {
+    showToast('Goal deleted', 'success');
+    loadGoals();
+  }
+}
+
+async function loadGoals() {
+  const goals = await api('/api/goals/list');
+  const listEl = document.getElementById('goalList');
+  listEl.innerHTML = '';
+
+  if (!goals || goals.length === 0) {
+    listEl.innerHTML = '<div class="card"><div class="empty-state">No goals yet. Add your wishlist above!</div></div>';
+    return;
+  }
+
+  goals.forEach(g => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const remaining = g.goal.target_amount - g.goal.current_amount;
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+        <div>
+          <strong style="font-size:15px;color:#fff">${escapeHtml(g.goal.name)}</strong>
+          <span class="priority-badge ${g.goal.priority}" style="margin-left:8px">${g.goal.priority}</span>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="deleteGoal(${g.goal.id})">✕</button>
+      </div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="font-size:13px"><span style="color:#888">Target:</span> <span style="color:#f59e0b;font-weight:600">Rp ${formatIDR(g.goal.target_amount)}</span></div>
+        <div style="font-size:13px"><span style="color:#888">Saved:</span> <span style="color:#34d399;font-weight:600">Rp ${formatIDR(g.goal.current_amount)}</span></div>
+        <div style="font-size:13px"><span style="color:#888">Remaining:</span> <span style="color:#ef4444;font-weight:600">Rp ${formatIDR(remaining)}</span></div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill ${g.goal.priority}" style="width:${g.progress}%"></div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:#666;margin-top:4px">${g.progress}% of target</div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #1a1a2e">
+        <div class="form-row">
+          <div class="form-group" style="max-width:150px">
+            <label>Total Saved So Far</label>
+            <input type="number" id="goal-progress-${g.goal.id}" placeholder="${g.goal.current_amount}">
+          </div>
+          <div class="form-group" style="max-width:80px;align-self:flex-end">
+            <button class="btn btn-sm" onclick="updateGoal(${g.goal.id})">Save</button>
+          </div>
+        </div>
+      </div>
+    `;
+    listEl.appendChild(card);
+  });
+}
+
+// ─── Utilities ──────────────────────────────────────────────
+
 function formatIDR(n) {
   return Math.round(n).toLocaleString('id-ID');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 async function logout() {

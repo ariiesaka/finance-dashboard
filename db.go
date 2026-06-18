@@ -47,6 +47,43 @@ func initDB(dbPath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("create transactions: %w", err)
 	}
 
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS debts (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		description TEXT DEFAULT '',
+		total_amount REAL NOT NULL,
+		remaining REAL NOT NULL,
+		interest_rate REAL DEFAULT 0,
+		priority TEXT DEFAULT 'medium',
+		notes TEXT DEFAULT '',
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`); err != nil {
+		return nil, fmt.Errorf("create debts: %w", err)
+	}
+
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS debt_payments (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		debt_id INTEGER NOT NULL,
+		amount REAL NOT NULL,
+		date TEXT NOT NULL,
+		notes TEXT DEFAULT '',
+		FOREIGN KEY (debt_id) REFERENCES debts(id)
+	)`); err != nil {
+		return nil, fmt.Errorf("create debt_payments: %w", err)
+	}
+
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS goals (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		target_amount REAL NOT NULL,
+		current_amount REAL DEFAULT 0,
+		priority TEXT DEFAULT 'medium',
+		notes TEXT DEFAULT '',
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`); err != nil {
+		return nil, fmt.Errorf("create goals: %w", err)
+	}
+
 	return db, nil
 }
 
@@ -146,4 +183,156 @@ func totalExpensesForMonth(db *sql.DB, yearMonth string) (float64, error) {
 		yearMonth+"%",
 	).Scan(&total)
 	return total, err
+}
+
+// ─── Debt Queries ───────────────────────────────────────────
+
+func createDebt(db *sql.DB, d Debt) (int64, error) {
+	res, err := db.Exec(
+		`INSERT INTO debts (name, description, total_amount, remaining, interest_rate, priority, notes)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		d.Name, d.Description, d.TotalAmount, d.Remaining, d.InterestRate, d.Priority, d.Notes,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+func listDebts(db *sql.DB) ([]Debt, error) {
+	rows, err := db.Query(
+		`SELECT id, name, COALESCE(description,''), total_amount, remaining,
+		        COALESCE(interest_rate,0), COALESCE(priority,'medium'), COALESCE(notes,''),
+		        COALESCE(created_at,'')
+		 FROM debts ORDER BY priority DESC, remaining DESC`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var debts []Debt
+	for rows.Next() {
+		var d Debt
+		if err := rows.Scan(&d.ID, &d.Name, &d.Description, &d.TotalAmount,
+			&d.Remaining, &d.InterestRate, &d.Priority, &d.Notes, &d.CreatedAt); err != nil {
+			return nil, err
+		}
+		debts = append(debts, d)
+	}
+	if debts == nil {
+		debts = []Debt{}
+	}
+	return debts, rows.Err()
+}
+
+func deleteDebt(db *sql.DB, id int) error {
+	_, err := db.Exec("DELETE FROM debt_payments WHERE debt_id = ?", id)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec("DELETE FROM debts WHERE id = ?", id)
+	return err
+}
+
+func totalPaidForDebt(db *sql.DB, debtID int) (float64, error) {
+	var total float64
+	err := db.QueryRow(
+		"SELECT COALESCE(SUM(amount), 0) FROM debt_payments WHERE debt_id = ?",
+		debtID,
+	).Scan(&total)
+	return total, err
+}
+
+func createDebtPayment(db *sql.DB, p DebtPayment) (int64, error) {
+	res, err := db.Exec(
+		`INSERT INTO debt_payments (debt_id, amount, date, notes) VALUES (?, ?, ?, ?)`,
+		p.DebtID, p.Amount, p.Date, p.Notes,
+	)
+	if err != nil {
+		return 0, err
+	}
+	// Update remaining balance
+	_, err = db.Exec(
+		"UPDATE debts SET remaining = remaining - ? WHERE id = ?",
+		p.Amount, p.DebtID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+func listDebtPayments(db *sql.DB, debtID int) ([]DebtPayment, error) {
+	rows, err := db.Query(
+		`SELECT id, debt_id, amount, date, COALESCE(notes,'') FROM debt_payments
+		 WHERE debt_id = ? ORDER BY date DESC, id DESC`, debtID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var payments []DebtPayment
+	for rows.Next() {
+		var p DebtPayment
+		if err := rows.Scan(&p.ID, &p.DebtID, &p.Amount, &p.Date, &p.Notes); err != nil {
+			return nil, err
+		}
+		payments = append(payments, p)
+	}
+	if payments == nil {
+		payments = []DebtPayment{}
+	}
+	return payments, rows.Err()
+}
+
+// ─── Goal Queries ───────────────────────────────────────────
+
+func createGoal(db *sql.DB, g Goal) (int64, error) {
+	res, err := db.Exec(
+		`INSERT INTO goals (name, target_amount, current_amount, priority, notes)
+		 VALUES (?, ?, ?, ?, ?)`,
+		g.Name, g.TargetAmount, g.CurrentAmount, g.Priority, g.Notes,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+func listGoals(db *sql.DB) ([]Goal, error) {
+	rows, err := db.Query(
+		`SELECT id, name, target_amount, current_amount,
+		        COALESCE(priority,'medium'), COALESCE(notes,''), COALESCE(created_at,'')
+		 FROM goals ORDER BY priority DESC, target_amount ASC`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var goals []Goal
+	for rows.Next() {
+		var g Goal
+		if err := rows.Scan(&g.ID, &g.Name, &g.TargetAmount,
+			&g.CurrentAmount, &g.Priority, &g.Notes, &g.CreatedAt); err != nil {
+			return nil, err
+		}
+		goals = append(goals, g)
+	}
+	if goals == nil {
+		goals = []Goal{}
+	}
+	return goals, rows.Err()
+}
+
+func updateGoalProgress(db *sql.DB, id int, amount float64) error {
+	_, err := db.Exec("UPDATE goals SET current_amount = ? WHERE id = ?", amount, id)
+	return err
+}
+
+func deleteGoal(db *sql.DB, id int) error {
+	_, err := db.Exec("DELETE FROM goals WHERE id = ?", id)
+	return err
 }
