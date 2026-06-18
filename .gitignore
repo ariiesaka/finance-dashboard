@@ -1,0 +1,5 @@
+data/finances.db
+.env
+dashboard
+/tmp/
+*.log

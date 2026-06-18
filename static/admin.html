@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Finance Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0a0f;
+            color: #e2e2e8;
+            min-height: 100vh;
+        }
+        .nav {
+            background: #12121a;
+            border-bottom: 1px solid #2a2a3e;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+        }
+        .nav-left { display: flex; align-items: center; gap: 24px; }
+        .nav-logo { color: #f59e0b; font-weight: 700; font-size: 18px; }
+        .nav-links { display: flex; gap: 16px; }
+        .nav-links a {
+            color: #8888a0;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active { color: #e2e2e8; background: #1a1a28; }
+        .nav-right { display: flex; align-items: center; gap: 12px; }
+        .btn-logout {
+            padding: 6px 16px;
+            background: transparent;
+            border: 1px solid #2a2a3e;
+            color: #ef4444;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .btn-logout:hover { background: rgba(239,68,68,0.1); border-color: #ef4444; }
+        .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+        .section {
+            background: #12121a;
+            border: 1px solid #2a2a3e;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .section-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #f59e0b; }
+        .form-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; align-items: end; }
+        .form-group { flex: 1; min-width: 150px; }
+        .form-group label { display: block; font-size: 12px; color: #8888a0; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: #1a1a28;
+            border: 1px solid #2a2a3e;
+            border-radius: 6px;
+            color: #e2e2e8;
+            font-size: 14px;
+            outline: none;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: #f59e0b;
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; font-family: monospace; }
+        .btn {
+            padding: 10px 20px;
+            background: #f59e0b;
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #d97706; }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #2a2a3e;
+            color: #a0a0b8;
+        }
+        .btn-secondary:hover { background: #1a1a28; border-color: #f59e0b; color: #f59e0b; }
+        .btn-danger {
+            background: transparent;
+            border: 1px solid #2a2a3e;
+            color: #ef4444;
+        }
+        .btn-danger:hover { background: rgba(239,68,68,0.1); border-color: #ef4444; }
+        .message {
+            padding: 10px 16px;
+            border-radius: 6px;
+            margin-top: 12px;
+            font-size: 13px;
+            display: none;
+        }
+        .message.success { display: block; background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #10b981; }
+        .message.error { display: block; background: rgba(239,68,68,0.1); border: 1px solid #ef4444; color: #ef4444; }
+        .list-item {
+            padding: 12px;
+            border: 1px solid #1a1a28;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .list-item-info { flex: 1; min-width: 150px; }
+        .list-item-name { font-weight: 500; }
+        .list-item-detail { font-size: 13px; color: #8888a0; }
+        .list-item-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .inline-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .inline-form input, .inline-form select { padding: 6px 10px; background: #1a1a28; border: 1px solid #2a2a3e; border-radius: 4px; color: #e2e2e8; font-size: 13px; outline: none; }
+        .inline-form input:focus { border-color: #f59e0b; }
+        @media (max-width: 768px) {
+            .container { padding: 16px; }
+            .form-row { flex-direction: column; }
+            .form-group { min-width: 100%; }
+        }
+        .hint { font-size: 12px; color: #8888a0; margin-top: 4px; }
+        .category-select { min-width: 140px; }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-left">
+            <div class="nav-logo">💰 Finance</div>
+            <div class="nav-links">
+                <a href="/dashboard.html">Dashboard</a>
+                <a href="/admin.html" class="active">Admin</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+    <div class="container">
+
+        <!-- Log Income -->
+        <div class="section">
+            <div class="section-title">📥 Log Income</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" id="incomeAmount" step="0.01" placeholder="e.g. 15000000">
+                </div>
+                <div class="form-group">
+                    <label>Source</label>
+                    <input type="text" id="incomeSource" placeholder="e.g. Salary">
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="incomeDate">
+                </div>
+                <button class="btn" onclick="addIncome()">Add Income</button>
+            </div>
+            <div id="incomeMessage" class="message"></div>
+        </div>
+
+        <!-- Bulk Income -->
+        <div class="section">
+            <div class="section-title">📦 Bulk Log Income</div>
+            <p style="font-size:13px;color:#8888a0;margin-bottom:12px;">Format: one per line: <code style="color:#f59e0b;">20M Kredivo salary July</code> (amount in M/juta/ribu format, source, date)</p>
+            <div class="form-group">
+                <textarea id="bulkIncomeText" placeholder="20M Kredivo salary July&#10;5M Freelance project June&#10;Rp 2.5jt Bonus"></textarea>
+            </div>
+            <button class="btn" onclick="addBulkIncome()">Process Bulk Income</button>
+            <div id="bulkMessage" class="message"></div>
+        </div>
+
+        <!-- Manage Categories -->
+        <div class="section">
+            <div class="section-title">🏷️ Manage Categories</div>
+            <div id="categoryList"></div>
+            <div id="categoryMessage" class="message"></div>
+        </div>
+
+        <!-- Manage Debts -->
+        <div class="section">
+            <div class="section-title">💳 Manage Debts</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Debt Name</label>
+                    <input type="text" id="debtName" placeholder="e.g. Kredivo BNPL">
+                </div>
+                <div class="form-group">
+                    <label>Total Amount</label>
+                    <input type="number" id="debtTotal" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Remaining</label>
+                    <input type="number" id="debtRemaining" step="0.01">
+                </div>
+                <button class="btn" onclick="addDebt()">Add Debt</button>
+            </div>
+            <div id="debtList"></div>
+            <div id="debtMessage" class="message"></div>
+        </div>
+
+        <!-- Manage Wishlist -->
+        <div class="section">
+            <div class="section-title">⭐ Manage Wishlist</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Item Name</label>
+                    <input type="text" id="wishName" placeholder="e.g. MacBook Pro">
+                </div>
+                <div class="form-group">
+                    <label>Target Amount</label>
+                    <input type="number" id="wishTarget" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <input type="number" id="wishPriority" value="0" placeholder="0=high">
+                </div>
+                <button class="btn" onclick="addWishlist()">Add Item</button>
+            </div>
+            <div id="wishlistList"></div>
+            <div id="wishlistMessage" class="message"></div>
+        </div>
+
+        <!-- Add Manual Transaction -->
+        <div class="section">
+            <div class="section-title">📝 Add Manual Transaction</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="txDate">
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="txType"><option value="expense">Expense</option><option value="income">Income</option></select>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <input type="text" id="txCategory" placeholder="Food, Transport..." value="Other">
+                </div>
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" id="txAmount" step="0.01">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Merchant</label>
+                    <input type="text" id="txMerchant" placeholder="e.g. Gojek">
+                </div>
+                <div class="form-group">
+                    <label>Account</label>
+                    <input type="text" id="txAccount" placeholder="e.g. BCA">
+                </div>
+                <div class="form-group">
+                    <label>Method</label>
+                    <input type="text" id="txMethod" placeholder="e.g. Debit">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="txDesc" placeholder="Optional">
+                </div>
+                <button class="btn" onclick="addTransaction()">Add Transaction</button>
+            </div>
+            <div id="txMessage" class="message"></div>
+        </div>
+
+    </div>
+
+    <script>
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/check-auth');
+                if (!res.ok) window.location.href = '/login.html';
+            } catch { window.location.href = '/login.html'; }
+        }
+
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/login.html';
+        }
+
+        function msg(el, text, type) {
+            const m = document.getElementById(el);
+            m.textContent = text;
+            m.className = 'message ' + type;
+            setTimeout(() => { m.style.display = 'none'; }, 4000);
+        }
+
+        function formatCurrency(amount) {
+            return 'Rp ' + Number(amount).toLocaleString('id-ID');
+        }
+
+        function parseIndonesianAmount(text) {
+            text = text.trim().toUpperCase();
+            let multiplier = 1;
+            let numStr = text;
+            if (text.endsWith('M') || text.endsWith('JT')) {
+                multiplier = text.endsWith('M') ? 1000000 : 1000000;
+                numStr = text.replace(/[MJTS]/g, '');
+            } else if (text.endsWith('RIBU') || text.endsWith('K')) {
+                multiplier = 1000;
+                numStr = text.replace(/RIBU|K/g, '');
+            } else if (text.startsWith('RP ')) {
+                numStr = text.replace('RP ', '').replace(/\./g, '');
+            }
+            numStr = numStr.replace(/[^0-9.,]/g, '').replace(/\./g, '').replace(',', '.');
+            const num = parseFloat(numStr);
+            return isNaN(num) ? 0 : num * multiplier;
+        }
+
+        function getTodayStr() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        // Set default dates
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('incomeDate').value = getTodayStr();
+            document.getElementById('txDate').value = getTodayStr();
+        });
+
+        async function addIncome() {
+            const amount = parseFloat(document.getElementById('incomeAmount').value);
+            const source = document.getElementById('incomeSource').value.trim();
+            const date = document.getElementById('incomeDate').value;
+
+            if (!amount || !source || !date) {
+                msg('incomeMessage', 'Please fill all fields', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/income', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount, source, date })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    msg('incomeMessage', `Income added: ${formatCurrency(amount)} from ${source}`, 'success');
+                    document.getElementById('incomeAmount').value = '';
+                    document.getElementById('incomeSource').value = '';
+                } else {
+                    msg('incomeMessage', 'Failed to add income', 'error');
+                }
+            } catch (err) {
+                msg('incomeMessage', 'Connection error', 'error');
+            }
+        }
+
+        async function addBulkIncome() {
+            const text = document.getElementById('bulkIncomeText').value.trim();
+            if (!text) {
+                msg('bulkMessage', 'Please enter income data', 'error');
+                return;
+            }
+
+            const lines = text.split('\n').filter(l => l.trim());
+            const entries = [];
+            let errors = [];
+
+            for (const line of lines) {
+                const parts = line.trim().split(/\s+/);
+                if (parts.length < 2) {
+                    errors.push(`Invalid line: "${line}"`);
+                    continue;
+                }
+                const amount = parseIndonesianAmount(parts[0]);
+                const source = parts.slice(1).join(' ');
+                const date = getTodayStr();
+
+                if (amount <= 0) {
+                    errors.push(`Invalid amount in: "${line}"`);
+                    continue;
+                }
+                entries.push({ amount, source, date });
+            }
+
+            if (entries.length === 0) {
+                msg('bulkMessage', 'No valid entries found. ' + errors.join('; '), 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/income', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(entries)
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    let txt = `${entries.length} income entries added`;
+                    if (errors.length) txt += '. Errors: ' + errors.join('; ');
+                    msg('bulkMessage', txt, 'success');
+                    document.getElementById('bulkIncomeText').value = '';
+                } else {
+                    msg('bulkMessage', 'Failed to add bulk income', 'error');
+                }
+            } catch (err) {
+                msg('bulkMessage', 'Connection error', 'error');
+            }
+        }
+
+        async function loadCategories() {
+            try {
+                const res = await fetch('/api/transactions?limit=100');
+                const txs = await res.json();
+                const container = document.getElementById('categoryList');
+
+                const uncategorized = txs.filter(t => t.type === 'expense' && (!t.category || t.category === 'Other'));
+                if (uncategorized.length === 0) {
+                    container.innerHTML = '<p style="color:#8888a0;font-size:13px;">All transactions have categories assigned.</p>';
+                    return;
+                }
+
+                container.innerHTML = uncategorized.map(t => `
+                    <div class="list-item">
+                        <div class="list-item-info">
+                            <span class="list-item-name">${t.date} - ${formatCurrency(t.amount)}</span>
+                            <span class="list-item-detail">${t.merchant || 'No merchant'} | Current: ${t.category || 'Other'}</span>
+                        </div>
+                        <div class="list-item-actions">
+                            <select class="category-select" id="cat-${t.id}">
+                                <option value="Food & Drink">Food & Drink</option>
+                                <option value="Transport">Transport</option>
+                                <option value="Shopping">Shopping</option>
+                                <option value="Bills">Bills</option>
+                                <option value="Entertainment">Entertainment</option>
+                                <option value="Health">Health</option>
+                                <option value="Education">Education</option>
+                                <option value="Housing">Housing</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <button class="btn btn-sm" onclick="updateCategory('${t.id}')">Save</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Load categories error:', err);
+            }
+        }
+
+        async function updateCategory(id) {
+            const cat = document.getElementById(`cat-${id}`).value;
+            try {
+                const res = await fetch(`/api/transactions/${id}/category`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: cat })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    msg('categoryMessage', 'Category updated', 'success');
+                    loadCategories();
+                }
+            } catch (err) {
+                msg('categoryMessage', 'Update failed', 'error');
+            }
+        }
+
+        async function loadDebts() {
+            try {
+                const res = await fetch('/api/debts');
+                const debts = await res.json();
+                const container = document.getElementById('debtList');
+                if (!debts || debts.length === 0) {
+                    container.innerHTML = '<p style="color:#8888a0;font-size:13px;">No debts yet.</p>';
+                    return;
+                }
+                container.innerHTML = debts.map(d => {
+                    const pct = d.total_amount > 0 ? ((d.total_amount - d.remaining) / d.total_amount * 100).toFixed(1) : 0;
+                    return `
+                        <div class="list-item">
+                            <div class="list-item-info">
+                                <span class="list-item-name">${d.name} ${d.paid_off ? '✅' : ''}</span>
+                                <span class="list-item-detail">${formatCurrency(d.remaining)} / ${formatCurrency(d.total_amount)} (${pct}%)</span>
+                            </div>
+                            <div class="list-item-actions">
+                                ${!d.paid_off ? `
+                                <div class="inline-form">
+                                    <input type="number" id="pay-${d.id}" step="0.01" placeholder="Amount" style="width:120px">
+                                    <input type="date" id="payDate-${d.id}" value="${getTodayStr()}" style="width:140px">
+                                    <button class="btn btn-sm" onclick="payDebt(${d.id})">Pay</button>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Load debts error:', err);
+            }
+        }
+
+        async function addDebt() {
+            const name = document.getElementById('debtName').value.trim();
+            const total = parseFloat(document.getElementById('debtTotal').value);
+            const remaining = parseFloat(document.getElementById('debtRemaining').value);
+
+            if (!name || !total) {
+                msg('debtMessage', 'Please fill required fields', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/debts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, total_amount: total, remaining: remaining || total })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    msg('debtMessage', 'Debt added', 'success');
+                    document.getElementById('debtName').value = '';
+                    document.getElementById('debtTotal').value = '';
+                    document.getElementById('debtRemaining').value = '';
+                    loadDebts();
+                }
+            } catch (err) {
+                msg('debtMessage', 'Failed to add debt', 'error');
+            }
+        }
+
+        async function payDebt(id) {
+            const amount = parseFloat(document.getElementById(`pay-${id}`).value);
+            const date = document.getElementById(`payDate-${id}`).value;
+            if (!amount || !date) {
+                msg('debtMessage', 'Enter amount and date', 'error');
+                return;
+            }
+            try {
+                const res = await fetch('/api/debts/pay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ debt_id: id, amount, date })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    msg('debtMessage', `Payment of ${formatCurrency(amount)} recorded`, 'success');
+                    loadDebts();
+                }
+            } catch (err) {
+                msg('debtMessage', 'Payment failed', 'error');
+            }
+        }
+
+        async function loadWishlist() {
+            try {
+                const res = await fetch('/api/wishlist');
+                const items = await res.json();
+                const container = document.getElementById('wishlistList');
+                if (!items || items.length === 0) {
+                    container.innerHTML = '<p style="color:#8888a0;font-size:13px;">No wishlist items yet.</p>';
+                    return;
+                }
+                container.innerHTML = items.map(w => {
+                    const pct = w.target_amount > 0 ? ((w.saved_amount / w.target_amount) * 100).toFixed(1) : 0;
+                    return `
+                        <div class="list-item">
+                            <div class="list-item-info">
+                                <span class="list-item-name">${w.name} ${w.achieved ? '✅' : ''}</span>
+                                <span class="list-item-detail">${formatCurrency(w.saved_amount)} / ${formatCurrency(w.target_amount)} (${pct}%) | Priority: ${w.priority}</span>
+                            </div>
+                            <div class="list-item-actions">
+                                ${!w.achieved ? `
+                                <div class="inline-form">
+                                    <input type="number" id="save-${w.id}" step="0.01" placeholder="Amount" style="width:120px">
+                                    <button class="btn btn-sm" onclick="saveToWish(${w.id})">Save</button>
+                                </div>
+                                <button class="btn btn-sm btn-secondary" onclick="markAchieved(${w.id})">🎯 Achieved</button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Load wishlist error:', err);
+            }
+        }
+
+        async function addWishlist() {
+            const name = document.getElementById('wishName').value.trim();
+            const target = parseFloat(document.getElementById('wishTarget').value);
+            const priority = parseInt(document.getElementById('wishPriority').value) || 0;
+
+            if (!name || !target) {
+                msg('wishlistMessage', 'Please fill required fields', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/wishlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, target_amount: target, priority })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    msg('wishlistMessage', 'Wishlist item added', 'success');
+                    document.getElementById('wishName').value = '';
+                    document.getElementById('wishTarget').value = '';
+                    loadWishlist();
+                }
+            } catch (err) {
+                msg('wishlistMessage', 'Failed to add item', 'error');
+            }
+        }
+
+        async function saveToWish(id) {
+            const amount = parseFloat(document.getElementById(`save-${id}`).value);
+            if (!amount) {
+                msg('wishlistMessage', 'Enter amount', 'error');
+                return;
+            }
+            try {
+                const res = await fetch('/api/wishlist/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wish_id: id, amount })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    msg('wishlistMessage', `Saved ${formatCurrency(amount)} to wishlist`, 'success');
+                    loadWishlist();
+                }
+            } catch (err) {
+                msg('wishlistMessage', 'Save failed', 'error');
+            }
+        }
+
+        async function markAchieved(id) {
+            try {
+                const res = await fetch(`/api/wishlist/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ achieved: 1 })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    msg('wishlistMessage', 'Marked as achieved!', 'success');
+                    loadWishlist();
+                }
+            } catch (err) {
+                msg('wishlistMessage', 'Update failed', 'error');
+            }
+        }
+
+        async function addTransaction() {
+            const date = document.getElementById('txDate').value;
+            const type = document.getElementById('txType').value;
+            const category = document.getElementById('txCategory').value.trim() || 'Other';
+            const amount = parseFloat(document.getElementById('txAmount').value);
+            const merchant = document.getElementById('txMerchant').value.trim();
+            const account = document.getElementById('txAccount').value.trim();
+            const method = document.getElementById('txMethod').value.trim();
+            const description = document.getElementById('txDesc').value.trim();
+
+            if (!date || !amount) {
+                msg('txMessage', 'Date and amount are required', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/transactions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date, type, category, amount, merchant, account, method, description })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    msg('txMessage', 'Transaction added', 'success');
+                    document.getElementById('txAmount').value = '';
+                    document.getElementById('txMerchant').value = '';
+                    document.getElementById('txAccount').value = '';
+                    document.getElementById('txMethod').value = '';
+                    document.getElementById('txDesc').value = '';
+                } else {
+                    msg('txMessage', 'Failed to add transaction', 'error');
+                }
+            } catch (err) {
+                msg('txMessage', 'Connection error', 'error');
+            }
+        }
+
+        checkAuth().then(() => {
+            loadCategories();
+            loadDebts();
+            loadWishlist();
+        });
+    </script>
+</body>
+</html>
