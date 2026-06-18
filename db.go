@@ -106,6 +106,14 @@ func storePassword(db *sql.DB, hash string) error {
 
 // ─── Expense Queries ─────────────────────────────────────────
 
+func getExpenseDateRange(db *sql.DB) (string, string, error) {
+	var minDate, maxDate string
+	err := db.QueryRow(
+		"SELECT COALESCE(MIN(date), ''), COALESCE(MAX(date), '') FROM transactions",
+	).Scan(&minDate, &maxDate)
+	return minDate, maxDate, err
+}
+
 func createExpense(db *sql.DB, txn Transaction) (int64, error) {
 	res, err := db.Exec(
 		`INSERT INTO transactions (date, time, category, amount, merchant, account, method, notes)

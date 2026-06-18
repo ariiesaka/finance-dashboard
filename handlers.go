@@ -283,6 +283,18 @@ func (h *authHandler) updateExpense(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *authHandler) expenseDateRange(w http.ResponseWriter, r *http.Request) {
+	minDate, maxDate, err := getExpenseDateRange(h.db)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to get date range"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"min_date": minDate,
+		"max_date": maxDate,
+	})
+}
+
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

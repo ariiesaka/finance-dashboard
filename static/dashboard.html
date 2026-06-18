@@ -351,7 +351,7 @@
 
     <div class="card">
       <h3>Date Range</h3>
-      <div class="form-row">
+      <div class="form-row" style="margin-bottom:8px">
         <div class="form-group" style="max-width:160px">
           <label>From</label>
           <input type="date" id="startDate" min="2026-06-01">
@@ -363,6 +363,11 @@
         <div class="form-group" style="max-width:80px;align-self:flex-end">
           <button class="btn btn-sm" onclick="loadRange()">Apply</button>
         </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-sm preset-btn" onclick="presetRange('thisMonth')" style="background:#1e3a5f;color:#93c5fd">This Month</button>
+        <button class="btn btn-sm preset-btn" onclick="presetRange('lastMonth')" style="background:#78350f;color:#fbbf24">Last Month</button>
+        <button class="btn btn-sm preset-btn" onclick="presetRange('all')" style="background:#065f46;color:#6ee7b7">All</button>
       </div>
     </div>
 
@@ -479,21 +484,84 @@
 const MIN_DATE = '2026-06-01';
 let chartInstance = null;
 let editId = null; // currently editing transaction id, null if adding new
+let dataMinDate = null;
+let dataMaxDate = null;
 
 function todayStr() {
   return new Date().toISOString().split('T')[0];
 }
 
-function monthStart() {
-  const d = new Date();
+function monthStart(d) {
+  if (!d) d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01';
 }
 
+function monthEnd(d) {
+  if (!d) d = new Date();
+  // Last day of the month
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return last.toISOString().split('T')[0];
+}
+
+function prevMonthStart(d) {
+  if (!d) d = new Date();
+  const prev = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  return monthStart(prev);
+}
+
+function prevMonthEnd(d) {
+  if (!d) d = new Date();
+  const prev = new Date(d.getFullYear(), d.getMonth(), 0);
+  return prev.toISOString().split('T')[0];
+}
+
 document.getElementById('expenseDate').value = todayStr();
-document.getElementById('startDate').value = monthStart();
-document.getElementById('endDate').value = todayStr();
-document.getElementById('endDate').max = todayStr();
-document.getElementById('startDate').min = MIN_DATE;
+
+async function initDates() {
+  const data = await api('/api/expenses/date-range');
+  dataMinDate = data.min_date;
+  dataMaxDate = data.max_date;
+
+  const startInput = document.getElementById('startDate');
+  const endInput = document.getElementById('endDate');
+  endInput.max = todayStr();
+  startInput.min = MIN_DATE;
+
+  if (dataMinDate && dataMaxDate) {
+    // Default: show the latest full month that has data
+    const maxD = new Date(dataMaxDate + 'T00:00:00');
+    startInput.value = monthStart(maxD);
+    endInput.value = dataMaxDate;
+  } else {
+    startInput.value = monthStart();
+    endInput.value = todayStr();
+  }
+
+  loadRange();
+}
+
+function presetRange(preset) {
+  const startInput = document.getElementById('startDate');
+  const endInput = document.getElementById('endDate');
+
+  switch (preset) {
+    case 'thisMonth':
+      startInput.value = monthStart();
+      endInput.value = todayStr();
+      break;
+    case 'lastMonth':
+      startInput.value = prevMonthStart();
+      endInput.value = prevMonthEnd();
+      break;
+    case 'all':
+      if (dataMinDate && dataMaxDate) {
+        startInput.value = dataMinDate;
+        endInput.value = dataMaxDate;
+      }
+      break;
+  }
+  loadRange();
+}
 
 async function api(path, opts = {}) {
   const res = await fetch(path, {
@@ -1001,7 +1069,7 @@ async function logout() {
 }
 
 // Load on page load
-loadMonth();
+initDates();
 </script>
 </body>
 </html>

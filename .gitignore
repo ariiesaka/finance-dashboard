@@ -34,3 +34,5 @@ coverage.html
 
 # Scratch
 tmp/
+dashboard.old
+populate_expenses.sh
