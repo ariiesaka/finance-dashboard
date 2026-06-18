@@ -245,21 +245,37 @@ func totalPaidForDebt(db *sql.DB, debtID int) (float64, error) {
 }
 
 func createDebtPayment(db *sql.DB, p DebtPayment) (int64, error) {
-	res, err := db.Exec(
+	tx, err := db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	res, err := tx.Exec(
 		`INSERT INTO debt_payments (debt_id, amount, date, notes) VALUES (?, ?, ?, ?)`,
 		p.DebtID, p.Amount, p.Date, p.Notes,
 	)
 	if err != nil {
 		return 0, err
 	}
-	// Update remaining balance
-	_, err = db.Exec(
-		"UPDATE debts SET remaining = remaining - ? WHERE id = ?",
-		p.Amount, p.DebtID,
+
+	r, err := tx.Exec(
+		"UPDATE debts SET remaining = remaining - ? WHERE id = ? AND remaining >= ?",
+		p.Amount, p.DebtID, p.Amount,
 	)
 	if err != nil {
 		return 0, err
 	}
+
+	rows, _ := r.RowsAffected()
+	if rows == 0 {
+		return 0, fmt.Errorf("payment exceeds remaining balance")
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+
 	return res.LastInsertId()
 }
 

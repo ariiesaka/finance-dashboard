@@ -147,7 +147,13 @@ func (h *authHandler) createPayment(w http.ResponseWriter, r *http.Request) {
 	id, err := createDebtPayment(h.db, p)
 	if err != nil {
 		log.Printf("create payment: %v", err)
-		writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to save"})
+		code := http.StatusInternalServerError
+		msg := "failed to save"
+		if err.Error() == "payment exceeds remaining balance" {
+			code = http.StatusBadRequest
+			msg = "payment exceeds remaining balance"
+		}
+		writeJSON(w, code, APIResponse{OK: false, Error: msg})
 		return
 	}
 

@@ -106,6 +106,11 @@ func (h *authHandler) updateGoal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.CurrentAmount < 0 {
+		writeJSON(w, http.StatusBadRequest, APIResponse{OK: false, Error: "current_amount cannot be negative"})
+		return
+	}
+
 	if err := updateGoalProgress(h.db, id, req.CurrentAmount); err != nil {
 		log.Printf("update goal %d: %v", id, err)
 		writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to update"})
