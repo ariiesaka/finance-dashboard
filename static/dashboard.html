@@ -411,11 +411,37 @@ async function loadMonth() {
     empty.style.display = 'none';
     data.transactions.forEach(t => {
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td>' + t.date + '</td>' +
-        '<td>' + t.merchant + '</td>' +
-        '<td><span class="category-badge">' + t.category + '</span></td>' +
-        '<td style="text-align:right;color:#ef4444;font-weight:600;">Rp ' + formatIDR(t.amount) + '</td>' +
-        '<td><button class="delete-btn" onclick="deleteExpense(' + t.id + ')">✕</button></td>';
+
+      const tdDate = document.createElement('td');
+      tdDate.textContent = t.date;
+      tr.appendChild(tdDate);
+
+      const tdMerchant = document.createElement('td');
+      tdMerchant.textContent = t.merchant;
+      tr.appendChild(tdMerchant);
+
+      const tdCategory = document.createElement('td');
+      const badge = document.createElement('span');
+      badge.className = 'category-badge';
+      badge.textContent = t.category;
+      tdCategory.appendChild(badge);
+      tr.appendChild(tdCategory);
+
+      const tdAmount = document.createElement('td');
+      tdAmount.style.textAlign = 'right';
+      tdAmount.style.color = '#ef4444';
+      tdAmount.style.fontWeight = '600';
+      tdAmount.textContent = 'Rp ' + formatIDR(t.amount);
+      tr.appendChild(tdAmount);
+
+      const tdDelete = document.createElement('td');
+      const btn = document.createElement('button');
+      btn.className = 'delete-btn';
+      btn.textContent = '✕';
+      btn.onclick = function() { deleteExpense(t.id); };
+      tdDelete.appendChild(btn);
+      tr.appendChild(tdDelete);
+
       tbody.appendChild(tr);
     });
   } else {

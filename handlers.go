@@ -3,7 +3,9 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -159,8 +161,14 @@ func (h *authHandler) listExpenses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	total, _ := totalExpensesForMonth(h.db, month)
-	cats, _ := expenseCategoryBreakdown(h.db, month)
+	total, err := totalExpensesForMonth(h.db, month)
+	if err != nil {
+		log.Printf("error getting total for %s: %v", month, err)
+	}
+	cats, err := expenseCategoryBreakdown(h.db, month)
+	if err != nil {
+		log.Printf("error getting breakdown for %s: %v", month, err)
+	}
 
 	writeJSON(w, http.StatusOK, MonthSummary{
 		TotalExpenses: total,
@@ -175,13 +183,19 @@ func (h *authHandler) deleteExpense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.URL.Query().Get("id")
-	if id == "" {
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
 		writeJSON(w, http.StatusBadRequest, APIResponse{OK: false, Error: "id required"})
 		return
 	}
 
-	_, err := h.db.Exec("DELETE FROM transactions WHERE id = ?", id)
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, APIResponse{OK: false, Error: "invalid id"})
+		return
+	}
+
+	_, err = h.db.Exec("DELETE FROM transactions WHERE id = ?", id)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to delete"})
 		return
