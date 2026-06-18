@@ -253,11 +253,9 @@ func totalExpensesForRange(db *sql.DB, startDate, endDate string) (float64, erro
 
 func updateExpense(db *sql.DB, t Transaction) error {
 	res, err := db.Exec(
-		`UPDATE transactions SET date=?, category=?, amount=?, merchant=?,
-		 account=COALESCE(?,account), method=COALESCE(?,method), notes=COALESCE(?,notes)
+		`UPDATE transactions SET date=?, category=?, amount=?, merchant=?
 		 WHERE id=?`,
-		t.Date, t.Category, t.Amount, t.Merchant,
-		t.Account, t.Method, t.Notes, t.ID,
+		t.Date, t.Category, t.Amount, t.Merchant, t.ID,
 	)
 	if err != nil {
 		return err

@@ -147,6 +147,8 @@ func cmdServe(db *sql.DB, port string, secure bool) {
 		http.ServeFile(w, r, "static/dashboard.html")
 	}))
 
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
 	protocol := "http"
 	if secure {
 		protocol = "https"
