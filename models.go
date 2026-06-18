@@ -45,6 +45,17 @@ type CreateExpenseRequest struct {
 	Notes    string  `json:"notes,omitempty"`
 }
 
+type UpdateExpenseRequest struct {
+	ID       int     `json:"id"`
+	Date     string  `json:"date"`
+	Amount   float64 `json:"amount"`
+	Category string  `json:"category"`
+	Merchant string  `json:"merchant"`
+	Account  string  `json:"account,omitempty"`
+	Method   string  `json:"method,omitempty"`
+	Notes    string  `json:"notes,omitempty"`
+}
+
 type CategoryBreakdown struct {
 	Category string  `json:"category"`
 	Total    float64 `json:"total"`

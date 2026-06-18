@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -142,32 +141,73 @@ func (h *authHandler) createExpense(w http.ResponseWriter, r *http.Request) {
 		"transaction": txn,
 	})
 }
-
 func (h *authHandler) listExpenses(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
+	startDate := r.URL.Query().Get("start_date")
+	endDate := r.URL.Query().Get("end_date")
 	month := r.URL.Query().Get("month")
-	if month == "" {
-		// Default to current month
+
+	var txns []Transaction
+	var cats []CategoryBreakdown
+	var total float64
+
+	if startDate != "" && endDate != "" {
+		var err error
+		txns, err = listExpensesForRange(h.db, startDate, endDate)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to list"})
+			return
+		}
+		cats, err = categoryBreakdownForRange(h.db, startDate, endDate)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to list"})
+			return
+		}
+		total, err = totalExpensesForRange(h.db, startDate, endDate)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to list"})
+			return
+		}
+	} else if month != "" {
+		var err error
+		txns, err = listExpensesForMonth(h.db, month)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to list"})
+			return
+		}
+		cats, err = expenseCategoryBreakdown(h.db, month)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to list"})
+			return
+		}
+		total, err = totalExpensesForMonth(h.db, month)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to list"})
+			return
+		}
+	} else {
+		// Default: current month
 		month = time.Now().UTC().Format("2006-01")
-	}
-
-	txns, err := listExpensesForMonth(h.db, month)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to fetch"})
-		return
-	}
-
-	total, err := totalExpensesForMonth(h.db, month)
-	if err != nil {
-		log.Printf("error getting total for %s: %v", month, err)
-	}
-	cats, err := expenseCategoryBreakdown(h.db, month)
-	if err != nil {
-		log.Printf("error getting breakdown for %s: %v", month, err)
+		var err error
+		txns, err = listExpensesForMonth(h.db, month)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to list"})
+			return
+		}
+		cats, err = expenseCategoryBreakdown(h.db, month)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to list"})
+			return
+		}
+		total, err = totalExpensesForMonth(h.db, month)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to list"})
+			return
+		}
 	}
 
 	writeJSON(w, http.StatusOK, MonthSummary{
@@ -202,6 +242,45 @@ func (h *authHandler) deleteExpense(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, APIResponse{OK: true})
+}
+
+func (h *authHandler) updateExpense(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodPut {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req UpdateExpenseRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, APIResponse{OK: false, Error: "invalid request"})
+		return
+	}
+
+	if req.ID <= 0 || req.Merchant == "" || req.Amount <= 0 || req.Date == "" {
+		writeJSON(w, http.StatusBadRequest, APIResponse{OK: false, Error: "id, merchant, amount, and date required"})
+		return
+	}
+
+	txn := Transaction{
+		ID:       req.ID,
+		Date:     req.Date,
+		Category: req.Category,
+		Amount:   req.Amount,
+		Merchant: req.Merchant,
+		Account:  req.Account,
+		Method:   req.Method,
+		Notes:    req.Notes,
+	}
+
+	if err := updateExpense(h.db, txn); err != nil {
+		writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"ok":    true,
+		"transaction": txn,
+	})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {

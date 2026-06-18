@@ -128,6 +128,7 @@ func cmdServe(db *sql.DB, port string, secure bool) {
 	mux.Handle("/api/expenses", authMiddleware(db, handler.createExpense))
 	mux.Handle("/api/expenses/list", authMiddleware(db, handler.listExpenses))
 	mux.Handle("/api/expenses/delete", authMiddleware(db, handler.deleteExpense))
+	mux.Handle("/api/expenses/update", authMiddleware(db, handler.updateExpense))
 
 	// Debt routes
 	mux.Handle("/api/debts", authMiddleware(db, handler.createDebt))
