@@ -252,6 +252,47 @@
   .priority-badge.medium { background: #78350f; color: #fbbf24; }
   .priority-badge.low { background: #1e3a5f; color: #93c5fd; }
 
+  /* Modal overlay */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: #12121a;
+    border: 1px solid #2a2a3e;
+    border-radius: 16px;
+    padding: 28px;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    animation: modalIn 0.2s ease;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .modal-box h3 {
+    font-size: 15px;
+    color: #fff;
+    margin-bottom: 20px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .modal-box .form-group { min-width: 100%; margin-bottom: 14px; }
+  .modal-box .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: flex-end;
+  }
+  .modal-box .modal-actions .btn { flex: none; }
+
   .toast {
     position: fixed;
     bottom: 20px;
@@ -282,6 +323,45 @@
 <div class="container">
 
   <div id="toast" class="toast"></div>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="editModal" onclick="closeEditModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <h3>✏️ Edit Expense</h3>
+      <div class="form-group">
+        <label>Merchant</label>
+        <input type="text" id="editMerchant" placeholder="e.g. Wingstop">
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="max-width:45%">
+          <label>Amount</label>
+          <input type="number" id="editAmount" placeholder="0" step="100">
+        </div>
+        <div class="form-group" style="max-width:55%">
+          <label>Category</label>
+          <select id="editCategory">
+            <option value="Food & Drink">Food & Drink</option>
+            <option value="Transport">Transport</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Bills & Utilities">Bills & Utilities</option>
+            <option value="Health">Health</option>
+            <option value="Personal Care">Personal Care</option>
+            <option value="Subscription">Subscription</option>
+            <option value="Transfer">Transfer</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="editDate">
+      </div>
+      <div class="modal-actions">
+        <button class="btn cancel-btn" onclick="closeEditModal()" style="padding:10px 20px">Cancel</button>
+        <button class="btn" id="editSaveBtn" onclick="saveEditExpense()" style="background:#065f46;color:#6ee7b7;padding:10px 24px">💾 Save</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Tabs -->
   <div class="tabs">
@@ -343,8 +423,7 @@
           <input type="date" id="expenseDate">
         </div>
         <div class="form-group" style="max-width: 100px; align-self: flex-end;">
-          <button class="btn" onclick="addExpense()" id="addExpenseBtn">Add</button>
-          <button class="btn cancel-btn" onclick="cancelEdit()" id="cancelEditBtn" style="display:none">Cancel</button>
+          <button class="btn" onclick="addExpense()">Add</button>
         </div>
       </div>
     </div>
@@ -483,7 +562,7 @@
 <script>
 const MIN_DATE = '2026-06-01';
 let chartInstance = null;
-let editId = null; // currently editing transaction id, null if adding new
+let editId = null; // currently editing transaction id
 let dataMinDate = null;
 let dataMaxDate = null;
 
@@ -594,12 +673,6 @@ function switchTab(tab) {
 // ─── EXPENSES ───────────────────────────────────────────────
 
 async function addExpense() {
-  if (editId !== null) {
-    // Currently editing — treat as save
-    await saveExpense(editId);
-    return;
-  }
-
   const merchant = document.getElementById('merchant').value.trim();
   const amount = parseFloat(document.getElementById('amount').value);
   const category = document.getElementById('category').value;
@@ -638,11 +711,10 @@ async function confirmDelete(id) {
 
 function editExpense(id, merchant, amount, category, date) {
   editId = id;
-  document.getElementById('merchant').value = merchant;
-  document.getElementById('amount').value = amount;
+  document.getElementById('editMerchant').value = merchant;
+  document.getElementById('editAmount').value = amount;
   
-  // Set the category select
-  const catSelect = document.getElementById('category');
+  const catSelect = document.getElementById('editCategory');
   for (let i = 0; i < catSelect.options.length; i++) {
     if (catSelect.options[i].value === category) {
       catSelect.selectedIndex = i;
@@ -650,55 +722,42 @@ function editExpense(id, merchant, amount, category, date) {
     }
   }
   
-  document.getElementById('expenseDate').value = date;
-  
-  // Change button to show "Save" and show cancel btn
-  const addBtn = document.getElementById('addExpenseBtn');
-  addBtn.textContent = '💾 Save';
-  addBtn.style.background = '#065f46';
-  addBtn.style.color = '#6ee7b7';
-  addBtn.onclick = function() { saveExpense(editId); };
-  document.getElementById('cancelEditBtn').style.display = 'inline-block';
-  document.getElementById('merchant').scrollIntoView({ behavior: 'smooth' });
-  document.getElementById('merchant').focus();
+  document.getElementById('editDate').value = date;
+  document.getElementById('editModal').classList.add('open');
+  document.getElementById('editMerchant').focus();
 }
 
-async function saveExpense(id) {
-  const merchant = document.getElementById('merchant').value.trim();
-  const amount = parseFloat(document.getElementById('amount').value);
-  const category = document.getElementById('category').value;
-  const date = document.getElementById('expenseDate').value;
+function closeEditModal(e) {
+  if (e && e.target !== e.currentTarget) return; // only close when clicking overlay
+  editId = null;
+  document.getElementById('editModal').classList.remove('open');
+}
+
+async function saveEditExpense() {
+  if (editId === null) return;
+
+  const merchant = document.getElementById('editMerchant').value.trim();
+  const amount = parseFloat(document.getElementById('editAmount').value);
+  const category = document.getElementById('editCategory').value;
+  const date = document.getElementById('editDate').value;
 
   if (!merchant || !amount || !date) {
-    showToast('Fill in merchant, amount, and date', 'error');
+    showToast('Fill in all fields', 'error');
     return;
   }
 
   const data = await api('/api/expenses/update', {
     method: 'POST',
-    body: JSON.stringify({ id, merchant, amount, category, date })
+    body: JSON.stringify({ id: editId, merchant, amount, category, date })
   });
 
   if (data.ok) {
-    cancelEdit();
+    closeEditModal();
     showToast('Expense updated!', 'success');
     loadRange();
   } else {
     showToast(data.error || 'Failed to update', 'error');
   }
-}
-
-function cancelEdit() {
-  editId = null;
-  document.getElementById('merchant').value = '';
-  document.getElementById('amount').value = '';
-  document.getElementById('expenseDate').value = todayStr();
-  const addBtn = document.getElementById('addExpenseBtn');
-  addBtn.textContent = 'Add';
-  addBtn.style.background = '#f59e0b';
-  addBtn.style.color = '#0a0a0f';
-  addBtn.onclick = function() { addExpense(); };
-  document.getElementById('cancelEditBtn').style.display = 'none';
 }
 
 async function loadRange() {
