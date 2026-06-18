@@ -17,6 +17,8 @@ type Session struct {
 }
 
 type Transaction struct {
+	// ID is a string because transactions come from Gmail with alphanumeric
+	// message IDs (e.g. "bca_cc_25062"). Other entities use auto-increment int IDs.
 	ID          string  `json:"id"`
 	Date        string  `json:"date"`
 	Time        string  `json:"time,omitempty"`
