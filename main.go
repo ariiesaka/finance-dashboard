@@ -18,7 +18,7 @@ const dbFile = "finances.db"
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: dashboard <setup|serve> [--port PORT]")
+		fmt.Println("Usage: dashboard <setup|serve> [--port PORT] [--secure]")
 		os.Exit(1)
 	}
 
@@ -43,15 +43,19 @@ func main() {
 		cmdSetup(db)
 	case "serve":
 		port := "8080"
+		secure := false
 		for i, arg := range os.Args {
 			if arg == "--port" && i+1 < len(os.Args) {
 				port = os.Args[i+1]
 			}
+			if arg == "--secure" {
+				secure = true
+			}
 		}
-		cmdServe(db, port)
+		cmdServe(db, port, secure)
 	default:
 		fmt.Printf("unknown command: %s\n", os.Args[1])
-		fmt.Println("Usage: dashboard <setup|serve> [--port PORT]")
+		fmt.Println("Usage: dashboard <setup|serve> [--port PORT] [--secure]")
 		os.Exit(1)
 	}
 }
@@ -97,8 +101,7 @@ func cmdSetup(db *sql.DB) {
 	fmt.Println("Password set successfully.")
 }
 
-func cmdServe(db *sql.DB, port string) {
-	// Check if password is set
+func cmdServe(db *sql.DB, port string, secure bool) {
 	hasUser, err := hasUser(db)
 	if err != nil {
 		log.Fatalf("check user: %v", err)
@@ -107,30 +110,30 @@ func cmdServe(db *sql.DB, port string) {
 		log.Fatal("no password set. Run 'dashboard setup' first.")
 	}
 
-	// Clean expired sessions on startup
 	cleanExpiredSessions(db)
 
-	handler := &authHandler{db: db}
+	handler := &authHandler{db: db, secureCookie: secure}
 
 	mux := http.NewServeMux()
 
-	// Public routes
 	mux.HandleFunc("/login.html", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/login.html")
 	})
 	mux.HandleFunc("/api/login", handler.login)
 
-	// Protected routes
 	mux.Handle("/api/logout", authMiddleware(db, handler.logout))
 	mux.Handle("/api/check-auth", authMiddleware(db, handler.checkAuth))
 
-	// Protected static pages
 	mux.Handle("/dashboard.html", authMiddleware(db, func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/dashboard.html")
 	}))
 
+	protocol := "http"
+	if secure {
+		protocol = "https"
+	}
 	fmt.Printf("Server starting on :%s\n", port)
-	fmt.Printf("Open http://localhost:%s/login.html\n", port)
+	fmt.Printf("Open %s://localhost:%s/login.html\n", protocol, port)
 	if err := http.ListenAndServe(":"+port, mux); err != nil {
 		log.Fatalf("server: %v", err)
 	}

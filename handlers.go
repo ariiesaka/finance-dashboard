@@ -7,7 +7,8 @@ import (
 )
 
 type authHandler struct {
-	db *sql.DB
+	db          *sql.DB
+	secureCookie bool
 }
 
 func (h *authHandler) login(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +60,7 @@ func (h *authHandler) login(w http.ResponseWriter, r *http.Request) {
 		Value:    sessionID,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false, // HTTP for local/dev
+		Secure:   h.secureCookie,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(sessionDuration.Seconds()),
 	})
