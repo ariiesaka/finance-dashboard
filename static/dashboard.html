@@ -471,8 +471,77 @@
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+    align-items: center;
     margin-top: 10px;
   }
+  .filter-group {
+    margin-left: auto;
+    min-width: 140px;
+  }
+  .filter-group select {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,0.35);
+    color: var(--text);
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .filter-group select:focus {
+    border-color: var(--border-focus);
+  }
+  .filter-group select option { background: #11131f; }
+
+  /* ── Sortable Headers ── */
+  th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+  }
+  th.sortable:hover { color: var(--text-secondary); }
+  .sort-arrow {
+    display: inline-block;
+    font-size: 9px;
+    margin-left: 3px;
+    opacity: 0.3;
+    transition: opacity 0.2s;
+  }
+  th.sortable:hover .sort-arrow { opacity: 0.7; }
+  .sort-arrow.active { opacity: 1; color: var(--accent); }
+
+  /* ── Actions Cell ── */
+  th.actions-cell { width: 72px; }
+  .action-group {
+    display: flex;
+    gap: 2px;
+    justify-content: flex-end;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  tr:hover .action-group { opacity: 1; }
+  .action-group .action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-family: inherit;
+  }
+  .action-group .action-btn:hover { background: var(--bg-surface); color: var(--text-secondary); }
+  .action-group .action-btn.edit:hover { color: var(--accent); background: var(--accent-soft); }
+  .action-group .action-btn.delete:hover { color: var(--red); background: var(--red-soft); }
 
   /* ── Responsive ── */
   @media (max-width: 640px) {
@@ -618,6 +687,20 @@
         <button class="btn btn-sm btn-ghost" onclick="presetRange('thisMonth')">This Month</button>
         <button class="btn btn-sm btn-ghost" onclick="presetRange('lastMonth')">Last Month</button>
         <button class="btn btn-sm btn-ghost" onclick="presetRange('all')">All</button>
+        <div class="filter-group">
+          <select id="categoryFilter" onchange="applyFilters()">
+            <option value="">All Categories</option>
+            <option value="Food & Drink">Food & Drink</option>
+            <option value="Transport">Transport</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Bills & Utilities">Bills & Utilities</option>
+            <option value="Health">Health</option>
+            <option value="Personal Care">Personal Care</option>
+            <option value="Subscription">Subscription</option>
+            <option value="Transfer">Transfer</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -634,7 +717,13 @@
       <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Date</th><th>Merchant</th><th>Category</th><th style="text-align:right">Amount</th><th></th><th></th></tr>
+          <tr>
+            <th class="sortable" onclick="toggleSort('date')" id="sort-date">Date <span class="sort-arrow" id="sort-date-arrow"></span></th>
+            <th>Merchant</th>
+            <th>Category</th>
+            <th class="sortable" onclick="toggleSort('amount')" id="sort-amount" style="text-align:right">Amount <span class="sort-arrow" id="sort-amount-arrow"></span></th>
+            <th class="actions-cell"></th>
+          </tr>
         </thead>
         <tbody id="expenseList"></tbody>
       </table>
@@ -735,9 +824,13 @@
 <script>
 const MIN_DATE = '2026-06-01';
 let chartInstance = null;
-let editId = null; // currently editing transaction id
+let editId = null;
 let dataMinDate = null;
 let dataMaxDate = null;
+let allTransactions = [];
+let selectedCategory = '';
+let sortField = 'date';
+let sortDir = 'desc';
 
 function todayStr() {
   return new Date().toISOString().split('T')[0];
@@ -944,6 +1037,12 @@ async function loadRange() {
 
   const data = await api('/api/expenses/list?start_date=' + startDate + '&end_date=' + endDate);
 
+  allTransactions = data.transactions || [];
+
+  // Reset category filter to "All Categories" when loading new data
+  document.getElementById('categoryFilter').value = '';
+  selectedCategory = '';
+
   document.getElementById('totalExpenses').textContent = 'Rp ' + formatIDR(data.total_expenses);
   document.getElementById('totalCategories').textContent = (data.categories || []).length;
   document.getElementById('totalTransactions').textContent = (data.transactions || []).length;
@@ -983,14 +1082,73 @@ async function loadRange() {
     });
   }
 
-  // Transactions table
+  // Transactions table — rendered via applyFilters()/renderTable()
+  applyFilters();
+}
+
+// ─── CATEGORY FILTER, SORT, & TABLE RENDERING ───────────────
+
+function applyFilters() {
+  selectedCategory = document.getElementById('categoryFilter').value;
+
+  let filtered = allTransactions;
+
+  // Category filter
+  if (selectedCategory) {
+    filtered = filtered.filter(t => t.category === selectedCategory);
+  }
+
+  // Sort
+  if (sortField) {
+    filtered.sort((a, b) => {
+      let valA, valB;
+      if (sortField === 'date') {
+        valA = a.date;
+        valB = b.date;
+      } else if (sortField === 'amount') {
+        valA = a.amount;
+        valB = b.amount;
+      }
+      if (sortDir === 'asc') {
+        return valA > valB ? 1 : valA < valB ? -1 : 0;
+      } else {
+        return valA < valB ? 1 : valA > valB ? -1 : 0;
+      }
+    });
+  }
+
+  renderTable(filtered);
+}
+
+function toggleSort(field) {
+  if (sortField === field) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortField = field;
+    sortDir = 'desc';
+  }
+
+  // Update sort arrows
+  document.getElementById('sort-date-arrow').textContent = '';
+  document.getElementById('sort-date-arrow').classList.remove('active');
+  document.getElementById('sort-amount-arrow').textContent = '';
+  document.getElementById('sort-amount-arrow').classList.remove('active');
+
+  const arrowEl = document.getElementById('sort-' + sortField + '-arrow');
+  arrowEl.textContent = sortDir === 'asc' ? ' ▲' : ' ▼';
+  arrowEl.classList.add('active');
+
+  applyFilters();
+}
+
+function renderTable(transactions) {
   const tbody = document.getElementById('expenseList');
   tbody.innerHTML = '';
   const empty = document.getElementById('emptyState');
 
-  if (data.transactions && data.transactions.length > 0) {
+  if (transactions && transactions.length > 0) {
     empty.style.display = 'none';
-    data.transactions.forEach(t => {
+    transactions.forEach(t => {
       const tr = document.createElement('tr');
 
       const tdDate = document.createElement('td');
@@ -1013,25 +1171,28 @@ async function loadRange() {
       tdAmount.textContent = 'Rp ' + formatIDR(t.amount);
       tr.appendChild(tdAmount);
 
-      // Edit button
-      const tdEdit = document.createElement('td');
+      // Unified action group (edit + delete in one cell)
+      const tdActions = document.createElement('td');
+      tdActions.className = 'actions-cell';
+      const actionGroup = document.createElement('div');
+      actionGroup.className = 'action-group';
+
       const editBtn = document.createElement('button');
       editBtn.className = 'action-btn edit';
       editBtn.textContent = '✎';
       editBtn.title = 'Edit';
       editBtn.onclick = function() { editExpense(t.id, t.merchant, t.amount, t.category, t.date); };
-      tdEdit.appendChild(editBtn);
-      tr.appendChild(tdEdit);
+      actionGroup.appendChild(editBtn);
 
-      // Delete button
-      const tdDelete = document.createElement('td');
       const delBtn = document.createElement('button');
       delBtn.className = 'action-btn delete';
       delBtn.textContent = '✕';
       delBtn.title = 'Delete';
       delBtn.onclick = function() { confirmDelete(t.id); };
-      tdDelete.appendChild(delBtn);
-      tr.appendChild(tdDelete);
+      actionGroup.appendChild(delBtn);
+
+      tdActions.appendChild(actionGroup);
+      tr.appendChild(tdActions);
 
       // Highlight row if it's the one being edited
       if (editId === t.id) {
