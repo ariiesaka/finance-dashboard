@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — Finance Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -16,15 +17,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 24px;
+    padding: 14px 24px;
     border-bottom: 1px solid #2a2a3e;
     background: #12121a;
   }
-  nav h2 {
-    font-size: 16px;
-    font-weight: 700;
-    color: #fff;
-  }
+  nav h2 { font-size: 16px; font-weight: 700; color: #fff; }
   nav button {
     background: none;
     border: 1px solid #2a2a3e;
@@ -35,35 +32,180 @@
     font-size: 13px;
     transition: all 0.2s;
   }
-  nav button:hover {
-    border-color: #ef4444;
-    color: #ef4444;
+  nav button:hover { border-color: #ef4444; color: #ef4444; }
+  .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+  .card {
+    background: #12121a;
+    border: 1px solid #2a2a3e;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
   }
-  .container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 40px 24px;
-    text-align: center;
-  }
-  .welcome {
-    font-size: 28px;
-    font-weight: 800;
-    color: #fff;
-    margin-bottom: 8px;
-  }
-  .sub {
+  .card h3 {
+    font-size: 13px;
     color: #888;
-    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
   }
-  .badge {
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .summary-box {
+    background: #0a0a0f;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+    border: 1px solid #2a2a3e;
+  }
+  .summary-box .value { font-size: 24px; font-weight: 800; color: #fff; margin-top: 4px; }
+  .summary-box .label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+  .value.green { color: #34d399; }
+  .value.red { color: #ef4444; }
+  .value.gold { color: #f59e0b; }
+
+  .form-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .form-group { flex: 1; min-width: 120px; }
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #2a2a3e;
+    background: #0a0a0f;
+    color: #e5e5e5;
+    font-size: 13px;
+    outline: none;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: #f59e0b; }
+  .form-group select option { background: #12121a; }
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    background: #f59e0b;
+    color: #0a0a0f;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  .btn:hover { background: #d97706; }
+  .btn-danger { background: #7f1d1d; color: #fca5a5; }
+  .btn-danger:hover { background: #991b1b; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    text-align: left;
+    padding: 8px 10px;
+    color: #666;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #2a2a3e;
+  }
+  td {
+    padding: 10px;
+    border-bottom: 1px solid #1a1a2e;
+  }
+  .category-badge {
     display: inline-block;
-    background: #065f46;
-    color: #6ee7b7;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
     font-weight: 600;
-    margin-top: 20px;
+    background: #2a2a3e;
+    color: #93c5fd;
+  }
+  .cat-chart-container {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .cat-chart { width: 180px; height: 180px; }
+  .cat-list { flex: 1; min-width: 200px; }
+  .cat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #1a1a2e;
+    font-size: 13px;
+  }
+  .cat-item .cat-name { color: #ccc; }
+  .cat-item .cat-amount { color: #f59e0b; font-weight: 600; }
+  .delete-btn {
+    background: none;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .delete-btn:hover { color: #ef4444; background: #2a1a1a; }
+  .empty-state { color: #555; text-align: center; padding: 20px; font-size: 13px; }
+  .month-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .month-nav h3 { margin-bottom: 0; }
+  .month-nav button {
+    background: #2a2a3e;
+    border: none;
+    color: #ccc;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .month-nav button:hover { background: #3a3a5e; }
+  .month-nav span { font-size: 14px; font-weight: 600; color: #fff; min-width: 80px; text-align: center; }
+
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    display: none;
+    z-index: 100;
+  }
+  .toast.success { background: #065f46; display: block; }
+  .toast.error { background: #7f1d1d; display: block; }
+
+  @media (max-width: 600px) {
+    .form-row { flex-direction: column; }
+    .form-group { min-width: 100%; }
   }
 </style>
 </head>
@@ -72,16 +214,259 @@
   <h2>📊 Finance Dashboard</h2>
   <button onclick="logout()">Logout</button>
 </nav>
+
 <div class="container">
-  <div class="welcome">✅ Logged in</div>
-  <div class="sub">More features coming soon — debts, wishlist, income tracker.</div>
-  <div class="badge">MVP v0.1 — Auth only</div>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- Summary -->
+  <div class="card">
+    <h3>This Month</h3>
+    <div class="summary-grid">
+      <div class="summary-box">
+        <div class="label">Expenses</div>
+        <div class="value red" id="totalExpenses">—</div>
+      </div>
+      <div class="summary-box">
+        <div class="label">Categories</div>
+        <div class="value gold" id="totalCategories">—</div>
+      </div>
+      <div class="summary-box">
+        <div class="label">Transactions</div>
+        <div class="value" id="totalTransactions" style="color:#fff">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Expense -->
+  <div class="card">
+    <h3>Add Expense</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Merchant</label>
+        <input type="text" id="merchant" placeholder="e.g. Wingstop" autofocus>
+      </div>
+      <div class="form-group" style="max-width: 100px;">
+        <label>Amount</label>
+        <input type="number" id="amount" placeholder="0" step="100">
+      </div>
+      <div class="form-group" style="max-width: 140px;">
+        <label>Category</label>
+        <select id="category">
+          <option value="Food & Drink">Food & Drink</option>
+          <option value="Transport">Transport</option>
+          <option value="Shopping">Shopping</option>
+          <option value="Bills & Utilities">Bills & Utilities</option>
+          <option value="Health">Health</option>
+          <option value="Personal Care">Personal Care</option>
+          <option value="Subscription">Subscription</option>
+          <option value="Transfer">Transfer</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group" style="max-width: 130px;">
+        <label>Date</label>
+        <input type="date" id="expenseDate">
+      </div>
+      <div class="form-group" style="max-width: 100px; align-self: flex-end;">
+        <button class="btn" onclick="addExpense()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Categories + Chart -->
+  <div class="card">
+    <h3>Spending by Category</h3>
+    <div class="cat-chart-container">
+      <div class="cat-chart"><canvas id="categoryChart"></canvas></div>
+      <div class="cat-list" id="categoryList"></div>
+    </div>
+  </div>
+
+  <!-- Recent Expenses -->
+  <div class="card">
+    <div class="month-nav">
+      <button onclick="changeMonth(-1)">◀</button>
+      <span id="monthLabel"></span>
+      <button onclick="changeMonth(1)">▶</button>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Merchant</th><th>Category</th><th style="text-align:right">Amount</th><th></th></tr>
+      </thead>
+      <tbody id="expenseList"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState">No expenses yet. Add one above!</div>
+  </div>
+
 </div>
+
 <script>
+let currentDate = new Date();
+let currentMonth = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0');
+let chartInstance = null;
+
+document.getElementById('expenseDate').value = currentDate.toISOString().split('T')[0];
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    ...opts
+  });
+  return res.json();
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  setTimeout(() => t.className = 'toast', 2500);
+}
+
+async function addExpense() {
+  const merchant = document.getElementById('merchant').value.trim();
+  const amount = parseFloat(document.getElementById('amount').value);
+  const category = document.getElementById('category').value;
+  const date = document.getElementById('expenseDate').value;
+
+  if (!merchant || !amount || !date) {
+    showToast('Fill in merchant, amount, and date', 'error');
+    return;
+  }
+
+  const data = await api('/api/expenses', {
+    method: 'POST',
+    body: JSON.stringify({ merchant, amount, category, date })
+  });
+
+  if (data.ok) {
+    document.getElementById('merchant').value = '';
+    document.getElementById('amount').value = '';
+    showToast('Expense added!', 'success');
+    loadMonth();
+    document.getElementById('merchant').focus();
+  } else {
+    showToast(data.error || 'Failed to save', 'error');
+  }
+}
+
+async function deleteExpense(id) {
+  const data = await api('/api/expenses/delete?id=' + id, { method: 'POST' });
+  if (data.ok) {
+    showToast('Deleted', 'success');
+    loadMonth();
+  }
+}
+
+async function loadMonth() {
+  const data = await api('/api/expenses/list?month=' + currentMonth);
+
+  document.getElementById('totalExpenses').textContent = 'Rp ' + formatIDR(data.total_expenses);
+  document.getElementById('totalCategories').textContent = (data.categories || []).length;
+  document.getElementById('totalTransactions').textContent = (data.transactions || []).length;
+  document.getElementById('monthLabel').textContent = currentMonth;
+
+  // Category list
+  const catList = document.getElementById('categoryList');
+  catList.innerHTML = '';
+  (data.categories || []).forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'cat-item';
+    div.innerHTML = '<span class="cat-name">' + c.category + '</span><span class="cat-amount">Rp ' + formatIDR(c.total) + '</span>';
+    catList.appendChild(div);
+  });
+
+  // Category chart
+  const ctx = document.getElementById('categoryChart').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+
+  if (data.categories && data.categories.length > 0) {
+    const colors = ['#f59e0b','#34d399','#3b82f6','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1'];
+    chartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: data.categories.map(c => c.category),
+        datasets: [{
+          data: data.categories.map(c => c.total),
+          backgroundColor: colors.slice(0, data.categories.length),
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+
+  // Transactions table
+  const tbody = document.getElementById('expenseList');
+  tbody.innerHTML = '';
+  const empty = document.getElementById('emptyState');
+
+  if (data.transactions && data.transactions.length > 0) {
+    empty.style.display = 'none';
+    data.transactions.forEach(t => {
+      const tr = document.createElement('tr');
+
+      const tdDate = document.createElement('td');
+      tdDate.textContent = t.date;
+      tr.appendChild(tdDate);
+
+      const tdMerchant = document.createElement('td');
+      tdMerchant.textContent = t.merchant;
+      tr.appendChild(tdMerchant);
+
+      const tdCategory = document.createElement('td');
+      const badge = document.createElement('span');
+      badge.className = 'category-badge';
+      badge.textContent = t.category;
+      tdCategory.appendChild(badge);
+      tr.appendChild(tdCategory);
+
+      const tdAmount = document.createElement('td');
+      tdAmount.style.textAlign = 'right';
+      tdAmount.style.color = '#ef4444';
+      tdAmount.style.fontWeight = '600';
+      tdAmount.textContent = 'Rp ' + formatIDR(t.amount);
+      tr.appendChild(tdAmount);
+
+      const tdDelete = document.createElement('td');
+      const btn = document.createElement('button');
+      btn.className = 'delete-btn';
+      btn.textContent = '✕';
+      btn.onclick = function() { deleteExpense(t.id); };
+      tdDelete.appendChild(btn);
+      tr.appendChild(tdDelete);
+
+      tbody.appendChild(tr);
+    });
+  } else {
+    empty.style.display = 'block';
+  }
+}
+
+function changeMonth(delta) {
+  const d = new Date(currentMonth + '-01');
+  d.setMonth(d.getMonth() + delta);
+  currentMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  loadMonth();
+}
+
+function formatIDR(n) {
+  return Math.round(n).toLocaleString('id-ID');
+}
+
 async function logout() {
   await fetch('/api/logout', { method: 'POST' });
   window.location.href = '/login.html';
 }
+
+// Load on page load
+loadMonth();
 </script>
 </body>
 </html>

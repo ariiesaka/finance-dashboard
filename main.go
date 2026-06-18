@@ -120,9 +120,14 @@ func cmdServe(db *sql.DB, port string, secure bool) {
 		http.ServeFile(w, r, "static/login.html")
 	})
 	mux.HandleFunc("/api/login", handler.login)
-
+	// Protected routes
 	mux.Handle("/api/logout", authMiddleware(db, handler.logout))
 	mux.Handle("/api/check-auth", authMiddleware(db, handler.checkAuth))
+
+	// Expense routes
+	mux.Handle("/api/expenses", authMiddleware(db, handler.createExpense))
+	mux.Handle("/api/expenses/list", authMiddleware(db, handler.listExpenses))
+	mux.Handle("/api/expenses/delete", authMiddleware(db, handler.deleteExpense))
 
 	mux.Handle("/dashboard.html", authMiddleware(db, func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/dashboard.html")

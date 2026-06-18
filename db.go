@@ -33,6 +33,20 @@ func initDB(dbPath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("create sessions: %w", err)
 	}
 
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS transactions (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		date TEXT NOT NULL,
+		time TEXT,
+		category TEXT NOT NULL DEFAULT 'Other',
+		amount REAL NOT NULL,
+		merchant TEXT NOT NULL,
+		account TEXT DEFAULT 'Cash',
+		method TEXT,
+		notes TEXT
+	)`); err != nil {
+		return nil, fmt.Errorf("create transactions: %w", err)
+	}
+
 	return db, nil
 }
 
@@ -51,4 +65,85 @@ func getPasswordHash(db *sql.DB) (string, error) {
 func storePassword(db *sql.DB, hash string) error {
 	_, err := db.Exec("INSERT INTO users (password_hash) VALUES (?)", hash)
 	return err
+}
+
+// ─── Expense Queries ─────────────────────────────────────────
+
+func createExpense(db *sql.DB, txn Transaction) (int64, error) {
+	res, err := db.Exec(
+		`INSERT INTO transactions (date, time, category, amount, merchant, account, method, notes)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		txn.Date, txn.Time, txn.Category, txn.Amount, txn.Merchant,
+		txn.Account, txn.Method, txn.Notes,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+func listExpensesForMonth(db *sql.DB, yearMonth string) ([]Transaction, error) {
+	rows, err := db.Query(
+		`SELECT id, date, COALESCE(time,''), category, amount, merchant,
+		        COALESCE(account,'Cash'), COALESCE(method,''), COALESCE(notes,'')
+		 FROM transactions
+		 WHERE date LIKE ?
+		 ORDER BY date DESC, id DESC`,
+		yearMonth+"%",
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var txns []Transaction
+	for rows.Next() {
+		var t Transaction
+		if err := rows.Scan(&t.ID, &t.Date, &t.Time, &t.Category, &t.Amount,
+			&t.Merchant, &t.Account, &t.Method, &t.Notes); err != nil {
+			return nil, err
+		}
+		txns = append(txns, t)
+	}
+	if txns == nil {
+		txns = []Transaction{}
+	}
+	return txns, rows.Err()
+}
+
+func expenseCategoryBreakdown(db *sql.DB, yearMonth string) ([]CategoryBreakdown, error) {
+	rows, err := db.Query(
+		`SELECT category, SUM(amount) as total, COUNT(*) as count
+		 FROM transactions
+		 WHERE date LIKE ?
+		 GROUP BY category
+		 ORDER BY total DESC`,
+		yearMonth+"%",
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var cats []CategoryBreakdown
+	for rows.Next() {
+		var c CategoryBreakdown
+		if err := rows.Scan(&c.Category, &c.Total, &c.Count); err != nil {
+			return nil, err
+		}
+		cats = append(cats, c)
+	}
+	if cats == nil {
+		cats = []CategoryBreakdown{}
+	}
+	return cats, rows.Err()
+}
+
+func totalExpensesForMonth(db *sql.DB, yearMonth string) (float64, error) {
+	var total float64
+	err := db.QueryRow(
+		"SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE date LIKE ?",
+		yearMonth+"%",
+	).Scan(&total)
+	return total, err
 }

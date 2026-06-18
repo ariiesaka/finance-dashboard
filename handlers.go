@@ -3,7 +3,10 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 type authHandler struct {
@@ -95,4 +98,114 @@ func (h *authHandler) logout(w http.ResponseWriter, r *http.Request) {
 func (h *authHandler) checkAuth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(APIResponse{OK: true})
+}
+
+// ─── Expense Handlers ────────────────────────────────────────
+
+func (h *authHandler) createExpense(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req CreateExpenseRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, APIResponse{OK: false, Error: "invalid request"})
+		return
+	}
+
+	if req.Merchant == "" || req.Amount <= 0 || req.Date == "" {
+		writeJSON(w, http.StatusBadRequest, APIResponse{OK: false, Error: "merchant, amount, and date required"})
+		return
+	}
+
+	txn := Transaction{
+		Date:     req.Date,
+		Category: req.Category,
+		Amount:   req.Amount,
+		Merchant: req.Merchant,
+		Account:  req.Account,
+		Method:   req.Method,
+		Notes:    req.Notes,
+	}
+
+	id, err := createExpense(h.db, txn)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to save"})
+		return
+	}
+
+	txn.ID = int(id)
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"ok":    true,
+		"id":    id,
+		"transaction": txn,
+	})
+}
+
+func (h *authHandler) listExpenses(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	month := r.URL.Query().Get("month")
+	if month == "" {
+		// Default to current month
+		month = time.Now().UTC().Format("2006-01")
+	}
+
+	txns, err := listExpensesForMonth(h.db, month)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to fetch"})
+		return
+	}
+
+	total, err := totalExpensesForMonth(h.db, month)
+	if err != nil {
+		log.Printf("error getting total for %s: %v", month, err)
+	}
+	cats, err := expenseCategoryBreakdown(h.db, month)
+	if err != nil {
+		log.Printf("error getting breakdown for %s: %v", month, err)
+	}
+
+	writeJSON(w, http.StatusOK, MonthSummary{
+		TotalExpenses: total,
+		Categories:    cats,
+		Transactions:  txns,
+	})
+}
+
+func (h *authHandler) deleteExpense(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete && r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		writeJSON(w, http.StatusBadRequest, APIResponse{OK: false, Error: "id required"})
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, APIResponse{OK: false, Error: "invalid id"})
+		return
+	}
+
+	_, err = h.db.Exec("DELETE FROM transactions WHERE id = ?", id)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, APIResponse{OK: false, Error: "failed to delete"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{OK: true})
+}
+
+func writeJSON(w http.ResponseWriter, status int, v interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(v)
 }
